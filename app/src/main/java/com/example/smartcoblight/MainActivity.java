@@ -335,6 +335,7 @@ public class MainActivity extends AppCompatActivity implements
     // SettingsDialog.OnSettingsChangedListener 实现
     @Override
     public void onSettingsChanged(String mqttBrokerUrl) {
+        Toast.makeText(this, "设置已保存，请重启应用以应用新设置", Toast.LENGTH_LONG).show();
         preferencesManager.saveMqttBrokerUrl(mqttBrokerUrl);
         mqttHelper.setMqttBrokerUrl(mqttBrokerUrl);
         mqttHelper.disconnect();
