@@ -26,7 +26,7 @@ public class LightDevice {
 
     public LightDevice() {
         this.status = false;
-        this.type = "wave";
+        this.type = "波浪";
         this.minDuty = 0f;
         this.maxDuty = 100f;
         this.speed = 1.0f;
