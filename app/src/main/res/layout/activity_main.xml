@@ -12,19 +12,6 @@
         android:layout_height="wrap_content"
         android:padding="24dp">
 
-        <!-- 标题 -->
-        <TextView
-            android:id="@+id/titleText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="xxx"
-            android:textColor="@color/text_primary"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
         <!-- 色盘和开关区域 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/colorPickerCard"
@@ -36,7 +23,7 @@
             app:cardElevation="8dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/titleText">
+            app:layout_constraintTop_toTopOf="parent">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
@@ -44,16 +31,18 @@
                 android:padding="24dp">
 
                 <!-- 色盘 -->
+
+                <!-- 开关按钮 -->
                 <com.example.smartcoblight.ColorPickerView
                     android:id="@+id/colorPickerView"
-                    android:layout_width="200dp"
-                    android:layout_height="200dp"
+                    android:layout_width="217dp"
+                    android:layout_height="214dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.504"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- 开关按钮 -->
                 <Button
                     android:id="@+id/powerButton"
                     android:layout_width="80dp"
@@ -72,9 +61,13 @@
                 <Button
                     android:id="@+id/advancedButton"
                     style="@style/AdvancedButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="67dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="8dp"
+                    android:padding="2dp"
                     android:text="高级设置"
+                    android:textColor="@color/slider_thumb"
+                    android:textSize="8sp"
                     app:layout_constraintBottom_toBottomOf="@id/colorPickerView"
                     app:layout_constraintEnd_toEndOf="@id/colorPickerView"
                     app:layout_constraintTop_toTopOf="@id/colorPickerView" />
@@ -89,24 +82,26 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@color/background_dark"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/colorPickerCard"
             app:lightColor="@color/cold_light"
             app:lightId="1"
-            app:lightName="冷灯" />
+            app:lightName="夜阑卧听风吹雨,铁马冰河入梦来" />
 
         <com.example.smartcoblight.LightControlView
             android:id="@+id/warmLightControl"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/background_dark"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/coldLightControl"
             app:lightColor="@color/warm_light"
             app:lightId="2"
-            app:lightName="暖灯" />
+            app:lightName="溪柴火软蛮毡暖,我与狸奴不出门" />
         <!--        &lt;!&ndash; 冷灯控制区域 &ndash;&gt;-->
         <!--        <androidx.cardview.widget.CardView-->
         <!--            android:id="@+id/coldLightCard"-->

@@ -93,10 +93,11 @@ public class LightControlView extends CardView {
 
     public void setLightInfo(String name, int id, int color) {
         if (name != null) {
-            lightTitle.setText(name + " (ID: " + id + ")");
+            lightTitle.setText(name);
             lightTitle.setTextColor(color);
         }
     }
+
 
     public boolean isAdvancedSettingsVisible() {
         return lightAdvancedSettings.getVisibility() == View.VISIBLE;

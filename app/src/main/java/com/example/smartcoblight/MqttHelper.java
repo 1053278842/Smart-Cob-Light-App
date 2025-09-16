@@ -3,6 +3,7 @@ package com.example.smartcoblight;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.smartcoblight.enums.LightEffectEnum;
 import com.google.gson.Gson;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -19,8 +20,7 @@ import java.util.List;
 
 public class MqttHelper {
     private static final String TAG = "MqttClient";
-    private static final String DEFAULT_MQTT_BROKER_URL = "tcp://121.36.251.16:1883";
-    private static final String CLIENT_ID = "SmartCobLight_Android";
+    private static final String CLIENT_ID = "SmartCobLight_Android_" + System.currentTimeMillis();
     private static final String TOPIC_CONTROL = "/ll/washroom/light/light001/down/control";
 
     private MqttAsyncClient mqttClient;
@@ -30,13 +30,14 @@ public class MqttHelper {
     private String mqttBrokerUrl;
 
     public MqttHelper(Context context) {
-        new MqttHelper(context, DEFAULT_MQTT_BROKER_URL);
+        new MqttHelper(context);
     }
 
     public MqttHelper(Context context, String brokerUrl) {
+        this.connectionListener = (MqttConnectionListener) context;
         this.context = context;
         this.gson = new Gson();
-        this.mqttBrokerUrl = brokerUrl != null ? brokerUrl : DEFAULT_MQTT_BROKER_URL;
+        this.mqttBrokerUrl = brokerUrl;
         try {
             mqttClient = new MqttAsyncClient(brokerUrl, CLIENT_ID, new MemoryPersistence());
         } catch (MqttException e) {
@@ -69,6 +70,12 @@ public class MqttHelper {
 
     /*连接到Mqtt broker*/
     public void connect(MqttConnectionListener listener) {
+        if (mqttBrokerUrl.contains("x") || mqttBrokerUrl.contains("X")) {
+            if (connectionListener != null) {
+                connectionListener.onConnectionFailed("第一次启动,请长按配置Broker IP");
+                return;
+            }
+        }
         /*已连接就忽略了 开发者模式*/
         if (mqttClient.isConnected()) {
             if (listener != null) {
@@ -130,11 +137,18 @@ public class MqttHelper {
             return;
         }
 
+        for (LightDevice device : devices) {
+            device.setType(LightEffectEnum.getByDesc(device.getType()).getCode());
+        }
         LightControlRequest request = new LightControlRequest(devices);
         String jsonPayload = gson.toJson(request);
+        for (LightDevice device : devices) {
+            device.setType(LightEffectEnum.getByCode(device.getType()).getDesc());
+        }
 
         MqttMessage message = new MqttMessage(jsonPayload.getBytes());
         message.setQos(1);
+        message.setRetained(true);
 
         try {
             mqttClient.publish(TOPIC_CONTROL, message);
@@ -147,6 +161,11 @@ public class MqttHelper {
     public boolean isConnected() {
         return mqttClient != null && mqttClient.isConnected();
     }
+
+    public void setMqttBrokerUrl(String mqttBrokerUrl) {
+        this.mqttBrokerUrl = mqttBrokerUrl;
+    }
+
 
     public void setConnectionListener(MqttConnectionListener listener) {
         this.connectionListener = listener;

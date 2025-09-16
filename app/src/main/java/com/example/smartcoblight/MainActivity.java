@@ -6,18 +6,19 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 
+import com.example.smartcoblight.databinding.ActivityMainBinding;
+import com.example.smartcoblight.enums.LightEffectEnum;
+import com.example.smartcoblight.enums.LightTypeEnum;
 import com.google.android.material.slider.RangeSlider;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements
@@ -28,50 +29,26 @@ public class MainActivity extends AppCompatActivity implements
     // UI组件
     private ColorPickerView colorPickerView;
     private Button powerButton;
-    private Button advancedButton;
-    private CardView advancedSettingsCard;
-    private RangeSlider coldDutySlider;
-    private RangeSlider warmDutySlider;
-    private SeekBar speedSeekBar;
-    private SeekBar phaseSeekBar;
-    private TextView speedValueText;
-    private TextView phaseValueText;
-    private Spinner typeSpinner;
+
     private TextView connectionStatusText;
 
     // 业务逻辑组件
     private MqttHelper mqttHelper;
     private PreferencesManager preferencesManager;
-    private List<LightDevice> devices;
+    private HashMap<LightControlView, LightDevice> devices;
 
     // 状态变量
     private boolean isPowerOn = false;
-    private boolean isAdvancedSettingsVisible = false;
-    // 状态变量
-    private boolean isColdAdvancedVisible = false;
-    private boolean isWarmAdvancedVisible = false;
-    private LinearLayout coldLightAdvancedSettings;
-    private LinearLayout warmLightAdvancedSettings;
+    private LightControlView[] lightViews;
+    private ActivityMainBinding binding;
 
-    private SeekBar coldSpeedSeekBar;
-    private SeekBar warmSpeedSeekBar;
-    private SeekBar coldPhaseSeekBar;
-    private SeekBar warmPhaseSeekBar;
-    private TextView coldSpeedValueText;
-    private TextView warmSpeedValueText;
-    private TextView coldPhaseValueText;
-    private TextView warmPhaseValueText;
-    private Spinner coldTypeSpinner;
-    private Spinner warmTypeSpinner;
-//    private ActivityMainBinding binding;
-
-    // 灯光类型选项
-    private String[] lightTypes = {"wave", "breath", "fire", "fade"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
         setTitle("此情无计可消除,才下眉头,却上心头");
         initViews();
         initComponents();
@@ -84,33 +61,11 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void initViews() {
-        colorPickerView = findViewById(R.id.colorPickerView);
-        powerButton = findViewById(R.id.powerButton);
-        advancedButton = findViewById(R.id.advancedButton);
-//        coldLightAdvancedSettings = findViewById(R.id.coldLightAdvancedSettings);
-//        warmLightAdvancedSettings = findViewById(R.id.warmLightAdvancedSettings);
-//
-//        coldDutySlider = findViewById(R.id.coldLightSlider);
-//        warmDutySlider = findViewById(R.id.warmLightSlider);
-//
-////        speedSeekBar = findViewById(R.id.speedSeekBar);
-//        coldSpeedSeekBar = findViewById(R.id.coldSpeedSeekBar);
-//        warmSpeedSeekBar = findViewById(R.id.warmSpeedSeekBar);
-//
-//        coldPhaseSeekBar = findViewById(R.id.coldPhaseSeekBar);
-//        warmPhaseSeekBar = findViewById(R.id.warmPhaseSeekBar);
-//
-////        phaseSeekBar = findViewById(R.id.phaseSeekBar);
-//        coldSpeedValueText = findViewById(R.id.coldSpeedValueText);
-//        warmSpeedValueText = findViewById(R.id.warmSpeedValueText);
-//        coldPhaseValueText = findViewById(R.id.coldPhaseValueText);
-//        warmPhaseValueText = findViewById(R.id.warmPhaseValueText);
-//        coldTypeSpinner = findViewById(R.id.coldTypeSpinner);
-//        warmTypeSpinner = findViewById(R.id.warmTypeSpinner);
-//        speedValueText = findViewById(R.id.speedValueText);
-//        phaseValueText = findViewById(R.id.phaseValueText);
-//        typeSpinner = findViewById(R.id.typeSpinner);
-        connectionStatusText = findViewById(R.id.connectionStatusText);
+        colorPickerView = binding.colorPickerView;
+        powerButton = binding.powerButton;
+        // 获取冷灯和暖灯控件
+        lightViews = new LightControlView[]{binding.coldLightControl, binding.warmLightControl};
+        connectionStatusText = binding.connectionStatusText;
     }
 
     private void initComponents() {
@@ -118,17 +73,13 @@ public class MainActivity extends AppCompatActivity implements
         String mqttBrokerUrl = preferencesManager.getMqttBrokerUrl();
         mqttHelper = new MqttHelper(this, mqttBrokerUrl);
 
-        // 初始化设备列表
-        devices = new ArrayList<>();
-        devices.add(new LightDevice(1)); // 冷灯
-        devices.add(new LightDevice(2)); // 暖灯
 
         // 设置类型选择器
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, lightTypes);
+                android.R.layout.simple_spinner_item, LightEffectEnum.getAllDescs());
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        coldTypeSpinner.setAdapter(adapter);
-        warmTypeSpinner.setAdapter(adapter);
+        binding.coldLightControl.getTypeSpinner().setAdapter(adapter);
+        binding.warmLightControl.getTypeSpinner().setAdapter(adapter);
     }
 
     private void loadSettings() {
@@ -136,40 +87,29 @@ public class MainActivity extends AppCompatActivity implements
         isPowerOn = preferencesManager.getStatus();
         updatePowerButton();
 
-        // 加载滑块设置
-        coldDutySlider.setStepSize(5f); // 步长
-        coldDutySlider.setValues(
-                (float) preferencesManager.getColdLightMin(),
-                (float) preferencesManager.getColdLightMax()
-        );
-        warmDutySlider.setStepSize(5f); // 步长
-        warmDutySlider.setValues(
-                (float) preferencesManager.getWarmLightMin(),
-                (float) preferencesManager.getWarmLightMax()
-        );
-
-        // 加载高级设置
-        float speed = preferencesManager.getSpeed();
-        warmSpeedSeekBar.setProgress((int) (speed * 10)); // 转换为0-50的整数
-        warmSpeedValueText.setText(String.format("%.1f", speed));
-        coldSpeedSeekBar.setProgress((int) (speed * 10)); // 转换为0-50的整数
-        coldSpeedValueText.setText(String.format("%.1f", speed));
-
-        float phase = preferencesManager.getPhase();
-        coldPhaseSeekBar.setProgress((int) (phase * 10)); // 转换为0-100的整数
-        coldPhaseValueText.setText(String.format("%.1f", phase));
-        warmPhaseSeekBar.setProgress((int) (phase * 10)); // 转换为0-100的整数
-        warmPhaseValueText.setText(String.format("%.1f", phase));
-
-        // 设置类型选择器
-        String savedType = preferencesManager.getType();
-        for (int i = 0; i < lightTypes.length; i++) {
-            if (lightTypes[i].equals(savedType)) {
-                coldTypeSpinner.setSelection(i);
-                warmTypeSpinner.setSelection(i);
-                break;
-            }
+        // 高级按钮的显影
+        boolean advVisible = preferencesManager.getAdvanceSettingsVisible();
+        for (LightControlView lightView : lightViews) {
+            lightView.setAdvancedSettingsVisible(advVisible);
         }
+
+        // 初始化设备列表
+        devices = new HashMap<>();
+        LightDevice coldSetting = preferencesManager.getLightSettings(LightTypeEnum.COLD_LIGHT.getCode());
+        LightDevice warmSetting = preferencesManager.getLightSettings(LightTypeEnum.WARM_LIGHT.getCode());
+        if (coldSetting != null) {
+            devices.put(binding.coldLightControl, coldSetting); // 冷吉尔丹的灯日
+        } else {
+            devices.put(binding.coldLightControl, new LightDevice(LightTypeEnum.COLD_LIGHT.getCode())); // 冷灯
+        }
+        if (warmSetting != null) {
+            devices.put(binding.warmLightControl, warmSetting); // 暖他马匹的灯草
+        } else {
+            devices.put(binding.warmLightControl, new LightDevice(LightTypeEnum.WARM_LIGHT.getCode())); // 暖灯
+        }
+
+        // 同步先前保存的数据
+        loadLightViewSetting();
 
         // 设置选中颜色
         int selectedColor = preferencesManager.getSelectedColor();
@@ -181,160 +121,110 @@ public class MainActivity extends AppCompatActivity implements
         colorPickerView.setOnColorSelectedListener(this);
 
         // 开关按钮监听
-        powerButton.setOnClickListener(v -> togglePower());
+        powerButton.setOnClickListener(v -> {
+            isPowerOn = !isPowerOn;
+            updatePowerButton();
+            preferencesManager.setStatus(isPowerOn);
+            for (LightDevice device : devices.values()) {
+                device.setStatus(isPowerOn);
+            }
+            saveDataAndSend();
+        });
 
         // 高级设置按钮监听
-        advancedButton.setOnClickListener(v -> {
-            isColdAdvancedVisible = !isColdAdvancedVisible;
-            coldLightAdvancedSettings.setVisibility(isColdAdvancedVisible ? View.VISIBLE : View.GONE);
-            isWarmAdvancedVisible = !isWarmAdvancedVisible;
-            warmLightAdvancedSettings.setVisibility(isWarmAdvancedVisible ? View.VISIBLE : View.GONE);
-        });
-        // 滑块监听
-        coldDutySlider.addOnSliderTouchListener(new RangeSlider.OnSliderTouchListener() {
-            @Override
-            public void onStartTrackingTouch(RangeSlider slider) {
-                // 用户开始滑动
-            }
-
-            @Override
-            public void onStopTrackingTouch(RangeSlider slider) {
-                // 用户停止滑动
-                List<Float> values = slider.getValues();
-                float start = values.get(0);
-                float end = values.get(1);
-                Log.d("RangeSlider", "最终滑块范围: " + start + " - " + end);
-                preferencesManager.saveColdLightRange((int) start, (int) end);
-                updateDevicesAndSend();
-            }
-        });
-        warmDutySlider.addOnSliderTouchListener(new RangeSlider.OnSliderTouchListener() {
-            @Override
-            public void onStartTrackingTouch(RangeSlider slider) {
-                // 用户开始滑动
-            }
-
-            @Override
-            public void onStopTrackingTouch(RangeSlider slider) {
-                // 用户停止滑动
-                List<Float> values = slider.getValues();
-                float start = values.get(0);
-                float end = values.get(1);
-                Log.d("RangeSlider", "最终滑块范围: " + start + " - " + end);
-                preferencesManager.saveWarmLightRange((int) start, (int) end);
-                updateDevicesAndSend();
+        binding.advancedButton.setOnClickListener(v -> {
+            for (LightControlView lightView : lightViews) {
+                boolean isVisible = lightView.isAdvancedSettingsVisible();
+                preferencesManager.setAdvanceSettingsVisible(!isVisible);
+                lightView.setAdvancedSettingsVisible(!isVisible);
             }
         });
 
-        // 速度滑块监听
-        warmSpeedSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float speed = progress / 10.0f;
-                    speedValueText.setText(String.format("%.1f", speed));
-                    preferencesManager.saveSpeed(speed);
-                    updateDevicesAndSend();
+        for (LightControlView lightView : lightViews) {
+            LightDevice lightDevice = devices.get(lightView);
+            assert lightDevice != null;
+            // 滑块监听
+            lightView.getLightSlider().addOnSliderTouchListener(new RangeSlider.OnSliderTouchListener() {
+                @Override
+                public void onStartTrackingTouch(RangeSlider slider) {
+                    // 用户开始滑动
                 }
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+                @Override
+                public void onStopTrackingTouch(RangeSlider slider) {
+                    // 用户停止滑动
+                    List<Float> values = slider.getValues();
+                    float start = values.get(0);
+                    float end = values.get(1);
+                    Log.d("RangeSlider", "最终滑块范围: " + start + " - " + end);
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
+                    lightDevice.setMinDuty(start);
+                    lightDevice.setMaxDuty(end);
+                    preferencesManager.saveLightSettings(lightDevice.getId(), lightDevice);
 
-        // 速度滑块监听
-        coldSpeedSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float speed = progress / 10.0f;
-                    speedValueText.setText(String.format("%.1f", speed));
-                    preferencesManager.saveSpeed(speed);
-                    updateDevicesAndSend();
+                    saveDataAndSend();
                 }
-            }
+            });
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+            // 速度滑块监听
+            lightView.getSpeedSeekBar().setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) {
+                        float speed = progress / 10.0f;
+                        lightView.getSpeedValueText().setText(String.format("%.1f", speed));
+                        lightDevice.setSpeed(speed);
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-
-        // 相位滑块监听
-        coldPhaseSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float phase = progress / 10.0f;
-                    phaseValueText.setText(String.format("%.1f", phase));
-                    preferencesManager.savePhase(phase);
-                    updateDevicesAndSend();
+                        saveDataAndSend();
+                    }
                 }
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-        warmPhaseSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float phase = progress / 10.0f;
-                    phaseValueText.setText(String.format("%.1f", phase));
-                    preferencesManager.savePhase(phase);
-                    updateDevicesAndSend();
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
                 }
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                }
+            });
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
+            // 相位滑块监听
+            lightView.getPhaseSeekBar().setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) {
+                        float phase = progress / 10.0f;
+                        lightView.getPhaseValueText().setText(String.format("%.1f", phase));
+                        lightDevice.setPhase(phase);
 
-        // 类型选择监听
-        coldTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedType = lightTypes[position];
-                preferencesManager.saveType(selectedType);
-                updateDevicesAndSend();
-            }
+                        saveDataAndSend();
+                    }
+                }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-        // 类型选择监听
-        warmTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedType = lightTypes[position];
-                preferencesManager.saveType(selectedType);
-                updateDevicesAndSend();
-            }
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                }
+            });
 
+            // 类型选择监听
+            lightView.getTypeSpinner().setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    String selectedType = LightEffectEnum.getAllDescs()[position];
+                    lightDevice.setType(selectedType);
+
+                    saveDataAndSend();
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                }
+            });
+        }
 
         // 长按连接状态显示设置
         connectionStatusText.setOnLongClickListener(v -> {
@@ -354,12 +244,6 @@ public class MainActivity extends AppCompatActivity implements
         dialog.show(getSupportFragmentManager(), "settings_dialog");
     }
 
-    private void togglePower() {
-        isPowerOn = !isPowerOn;
-        updatePowerButton();
-        preferencesManager.saveStatus(isPowerOn);
-        updateDevicesAndSend();
-    }
 
     private void updatePowerButton() {
         if (isPowerOn) {
@@ -371,34 +255,48 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void toggleAdvancedSettings() {
-        isAdvancedSettingsVisible = !isAdvancedSettingsVisible;
-        advancedSettingsCard.setVisibility(isAdvancedSettingsVisible ? View.VISIBLE : View.GONE);
+
+    /**
+     * 改变状态、值时应当缓存，并发送到mqtt中
+     */
+    private void saveDataAndSend() {
+        for (LightDevice lightDevice : devices.values()) {
+            preferencesManager.saveLightSettings(lightDevice.getId(), lightDevice);
+        }
+
+        if (mqttHelper.isConnected()) {
+            mqttHelper.sendLightControl(new ArrayList<>(devices.values()));
+        }
+        Log.d("MainActivity", "设备配置已更新，MQTT已发送");
     }
 
-    private void updateDevicesAndSend() {
-        // 更新设备配置
-        LightDevice coldLight = devices.get(0);
-        coldLight.setStatus(isPowerOn);
-        coldLight.setMinDuty(coldDutySlider.getValues().get(0));
-        coldLight.setMaxDuty(coldDutySlider.getValues().get(1));
-        coldLight.setSpeed(preferencesManager.getSpeed());
-        coldLight.setPhase(preferencesManager.getPhase());
-        coldLight.setType(preferencesManager.getType());
+    private void loadLightViewSetting() {
+        for (LightControlView lightView : lightViews) {
+            LightDevice lightSettings = devices.get(lightView);
 
-        LightDevice warmLight = devices.get(1);
-        warmLight.setStatus(isPowerOn);
-        warmLight.setMinDuty(warmDutySlider.getValues().get(0));
-        warmLight.setMaxDuty(warmDutySlider.getValues().get(1));
-        warmLight.setSpeed(preferencesManager.getSpeed());
-        warmLight.setPhase(preferencesManager.getPhase());
-        warmLight.setType(preferencesManager.getType());
+            lightView.getLightSlider().setStepSize(5f); // 步长
+            assert lightSettings != null;
+            lightView.getLightSlider().setValues(lightSettings.getMinDuty(), lightSettings.getMaxDuty());
 
-        // 暂时禁用MQTT发送
-        // if (mqttClient.isConnected()) {
-        //     mqttClient.sendLightControl(devices);
-        // }
-        Log.d("MainActivity", "设备配置已更新，但MQTT发送已禁用");
+            // 加载高级设置
+            float speed = lightSettings.getSpeed();
+            lightView.getSpeedSeekBar().setProgress((int) (speed * 10)); // 转换为0-50的整数
+            lightView.getSpeedValueText().setText(String.format("%.1f", speed));
+
+            float phase = lightSettings.getPhase();
+            lightView.getPhaseSeekBar().setProgress((int) (phase * 10)); // 转换为0-100的整数
+            lightView.getPhaseValueText().setText(String.format("%.1f", phase));
+
+            // 设置类型选择器
+            String savedType = lightSettings.getType();
+            for (int i = 0; i < LightEffectEnum.getAllDescs().length; i++) {
+                if (LightEffectEnum.getAllDescs()[i].equals(savedType)) {
+                    lightView.getTypeSpinner().setSelection(i);
+                    break;
+                }
+            }
+        }
+        Log.d("MainActivity", "设备设置已同步！");
     }
 
     // MqttConnectionListener 实现
@@ -438,7 +336,9 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onSettingsChanged(String mqttBrokerUrl) {
         preferencesManager.saveMqttBrokerUrl(mqttBrokerUrl);
-        Toast.makeText(this, "设置已保存，请重启应用以应用新设置", Toast.LENGTH_LONG).show();
+        mqttHelper.setMqttBrokerUrl(mqttBrokerUrl);
+        mqttHelper.disconnect();
+        mqttHelper.connect(this);
     }
 
     @Override
