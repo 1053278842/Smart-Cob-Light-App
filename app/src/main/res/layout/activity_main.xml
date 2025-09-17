@@ -12,12 +12,31 @@
         android:layout_height="wrap_content"
         android:padding="24dp">
 
+        <!-- #################### 诗词显示组件（新增）#################### -->
+        <TextView
+            android:id="@+id/poemDisplayView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginBottom="16dp"
+            android:lineSpacingExtra="4dp"
+            android:paddingHorizontal="8dp"
+            android:text=""
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="" />
+
+
         <!-- 色盘和开关区域 -->
         <androidx.cardview.widget.CardView
             android:id="@+id/colorPickerCard"
             android:layout_width="0dp"
             android:layout_height="280dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             app:cardBackgroundColor="@color/surface_dark"
             app:cardCornerRadius="16dp"
             app:cardElevation="8dp"
@@ -28,7 +47,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="24dp">
+                android:padding="14dp">
 
                 <!-- 色盘 -->
 

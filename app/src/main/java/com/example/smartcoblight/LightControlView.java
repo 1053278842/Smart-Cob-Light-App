@@ -5,6 +5,7 @@ import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.animation.AlphaAnimation;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -105,6 +106,9 @@ public class LightControlView extends CardView {
 
     public void setAdvancedSettingsVisible(boolean visible) {
         lightAdvancedSettings.setVisibility(visible ? View.VISIBLE : View.GONE);
+        AlphaAnimation fadeIn = new AlphaAnimation(0f, 1f);
+        fadeIn.setDuration(300);
+        lightAdvancedSettings.startAnimation(fadeIn);
     }
 
     public RangeSlider getLightSlider() {

@@ -3,6 +3,7 @@ package com.example.smartcoblight;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AlphaAnimation;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -12,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.smartcoblight.api.PoemApiClient;
 import com.example.smartcoblight.databinding.ActivityMainBinding;
 import com.example.smartcoblight.enums.LightEffectEnum;
 import com.example.smartcoblight.enums.LightTypeEnum;
@@ -24,7 +26,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements
         MqttHelper.MqttConnectionListener,
         ColorPickerView.OnColorSelectedListener,
-        SettingsDialog.OnSettingsChangedListener {
+        SettingsDialog.OnSettingsChangedListener, PoemApiClient.PoemReqListener {
 
     // UI组件
     private ColorPickerView colorPickerView;
@@ -49,15 +51,22 @@ public class MainActivity extends AppCompatActivity implements
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        setTitle("此情无计可消除,才下眉头,却上心头");
+        setTitle("老婆专属遥控器");
         initViews();
         initComponents();
         loadSettings();
         setupListeners();
+
+        initReqInfo();
         // 暂时禁用MQTT连接，让应用先能正常启动
         new android.os.Handler().postDelayed(() -> connectMqtt(), 1000);
 //        connectionStatusText.setText("MQTT功能已禁用");
         connectionStatusText.setTextColor(getResources().getColor(R.color.text_secondary));
+    }
+
+    private void initReqInfo() {
+        PoemApiClient poemApiClient = new PoemApiClient(this);
+        poemApiClient.req();
     }
 
     private void initViews() {
@@ -357,5 +366,27 @@ public class MainActivity extends AppCompatActivity implements
         if (mqttHelper != null) {
             mqttHelper.connect(this);
         }
+    }
+
+    @Override
+    public void onPoemFailure() {
+
+    }
+
+    @Override
+    public void onPoemSuccess(String content) {
+        // 成功回调（子线程），更新UI必须切换到主线程
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // 这里才能安全地执行UI操作
+                binding.poemDisplayView.setText(content);
+                // 在 onPoemSuccess 的 runOnUiThread 中添加动画
+                binding.poemDisplayView.setVisibility(View.VISIBLE);
+                AlphaAnimation fadeIn = new AlphaAnimation(0f, 1f);
+                fadeIn.setDuration(300);
+                binding.poemDisplayView.startAnimation(fadeIn);
+            }
+        });
     }
 }
